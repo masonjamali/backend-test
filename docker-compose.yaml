@@ -29,6 +29,19 @@ services:
   dice-postgres:
     image: postgres:10-alpine
 
+  wheel:
+    image: node:10-alpine
+    working_dir: /node
+    command: yarn start
+    volumes:
+    - ./wheel:/node
+    depends_on:
+    - redis
+    - wheel-postgres
+
+  wheel-postgres:
+    image: postgres:10-alpine
+
   statistic:
     image: node:10-alpine
     working_dir: /node

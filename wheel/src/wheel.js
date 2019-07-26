@@ -19,7 +19,7 @@ const parseSeed = seed => {
 
 const usersRollHistoryQ = {};
 
-exports.rollDice = ({ user, amount, target }) =>
+exports.spinWheel = ({ user, amount }) =>
   knex.transaction(async trx => {
     const qTocken = uuid();
     if (Array.isArray(usersRollHistoryQ[user])) {
@@ -32,8 +32,6 @@ exports.rollDice = ({ user, amount, target }) =>
       await new Promise(done => setTimeout(done, 50));
     }
 
-    assert(target >= 0);
-    assert(target < 99);
     assert(amount >= 0);
 
     let [seed] = await trx('seed').where('user', user);
@@ -60,13 +58,12 @@ exports.rollDice = ({ user, amount, target }) =>
     // we take the first 32 bits (4 bytes, 8 hex chars)
     const int = parseInt(hmac.substr(0, 8), 16);
     const float = int / 2 ** 32;
-
     const result = Math.floor(float * 100);
-    const odds = (99 - target) / 100;
-    const isWin = result > target;
+    let payout = 0;
+    if (result <= 20) payout = 0;
+    else if (result > 20 && result <= 90) payout = amount * 1.2;
+    else payout = amount * 1.5;
 
-    // 0.99 applies our house edge of 1%
-    const payout = isWin ? (amount / odds) * 0.99 : 0;
     const [bet] = await trx('bet')
       .insert({
         id: uuid(),
@@ -75,7 +72,7 @@ exports.rollDice = ({ user, amount, target }) =>
         amount,
         payout,
         result,
-        target,
+        // target,
         nonce
       })
       .returning('*');
@@ -84,22 +81,18 @@ exports.rollDice = ({ user, amount, target }) =>
       .update('nonce', trx.raw('nonce + 1'))
       .where('id', seed.id);
 
-    await redis.publish('dice', JSON.stringify(bet));
+    await redis.publish('wheel', JSON.stringify(bet));
     usersRollHistoryQ[user].shift();
     return bet;
   });
 
-const betsCache = {};
 exports.getBets = async ({ user, limit, offset }) => {
-  if (betsCache[user]) {
-    return betsCache[user];
-  }
   const bets = await knex('bet')
     .where('user', user)
     .orderBy('bet.created_at', 'desc')
     .limit(limit)
     .offset(offset);
-  betsCache[user] = bets;
+
   return bets;
 };
 

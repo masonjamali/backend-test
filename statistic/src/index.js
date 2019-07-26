@@ -18,8 +18,16 @@ async function start() {
   redis.subscribe('dice');
   redis.on('message', async (channel, json) => {
     try {
-      const data = JSON.parse(json);
       if (channel === 'dice') {
+        // eslint-disable-next-line no-param-reassign
+        json.game = 'dice';
+        const data = JSON.parse(json);
+        await updateStatistic(data);
+      }
+      if (channel === 'wheel') {
+        // eslint-disable-next-line no-param-reassign
+        json.game = 'wheel';
+        const data = JSON.parse(json);
         await updateStatistic(data);
       }
     } catch (e) {
@@ -33,7 +41,7 @@ async function start() {
 
   app.post(
     '/get-statistic',
-    response(async ({ user }) => getStatistic({ user }))
+    response(async ({ user, game }) => getStatistic({ user, game }))
   );
 
   app.listen(80);

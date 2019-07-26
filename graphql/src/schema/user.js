@@ -13,11 +13,13 @@ exports.Type = new GraphQLObjectType({
   name: 'User',
   fields: () => ({
     name: { type: GraphQLString },
+    game: { type: GraphQLString },
     statistic: {
       type: Statistic.Type,
-      resolve: async ({ name: user }) => {
+      resolve: async ({ name: user, game }) => {
         const { data } = await axios.post('http://statistic/get-statistic', {
-          user
+          user,
+          game
         });
         return data;
       }

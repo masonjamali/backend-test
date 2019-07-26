@@ -3,7 +3,7 @@ exports.up = async knex => {
     table.uuid('id').primary();
 
     table
-      .string('user')
+      .string(['user', 'game'])
       .notNull()
       .unique();
 
